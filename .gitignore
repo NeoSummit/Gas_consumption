@@ -1,0 +1,23 @@
+# Ignorer les fichiers Python générés
+__pycache__/
+*.py[cod]
+*.so
+
+# Ignorer les fichiers temporaires ou journaux
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Ignorer les checkpoints de Jupyter Notebook
+.ipynb_checkpoints/
+
+# Ignorer les fichiers générés par l'OS
+.DS_Store
+Thumbs.db
+
+# Ignorer les fichiers compressés ou archivés
+*.zip
+*.tar.gz
+*.rar
