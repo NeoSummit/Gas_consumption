@@ -60,4 +60,4 @@ def read_weather(file: str = "data/open-meteo-52.55N13.41E38m.csv") -> pd.Series
     # Set the date column as the index
     data.set_index("Date", inplace=True)
     
-    return data
+    return data.sort_index()
