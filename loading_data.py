@@ -1,46 +1,45 @@
 import pandas as pd
 import numpy as np
 
-def read_consumption(
-    file_netconnect: str = "data\AggregatedConsumptionData NetConnect.csv",
-    file_gaspool: str = "data\Aggregated Consumption Date Market Area GASPOOL.csv",
-    file_the: str = "data\AggregatedConsumptionData Trading Hub.csv",
-) -> tuple([pd.Series, pd.Series, pd.Series]):
-    """Reads historic natural gas consumption in MWh and returns them as a tuple of pandas series."""
+def load_gas_consumption_data(
+    file_ncg: str = r"data/AggregatedConsumptionData NetConnect.csv",
+    file_gaspool: str = r"data/Aggregated Consumption Date Market Area GASPOOL.csv",
+    file_the: str = r"data/AggregatedConsumptionData Trading Hub.csv",
+) -> pd.DataFrame:
+    """Loads historical natural gas consumption in MWh and returns it as a pandas DataFrame."""
+
+    for file in [file_ncg, file_gaspool, file_the]:
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"File not found: {file}")
 
     # Read NetConnect Germany CSV file
-    ncg_consumption = pd.read_csv(file_netconnect, sep=";", index_col="DayOfUse")
-
-    ncg_consumption.index = pd.to_datetime(ncg_consumption.index, format="%d.%m.%Y")
-
-    # Convert kWh to MWh and aggregate different measurement types
-    ncg_consumption = ncg_consumption.select_dtypes("number") / 1000
-    ncg_consumption_aggregated = ncg_consumption.sum(axis="columns")
+    ncg_data = pd.read_csv(file_ncg, sep=";", index_col="DayOfUse")
+    ncg_data.index = pd.to_datetime(ncg_data.index, format="%d.%m.%Y")
+    ncg_data = ncg_data.select_dtypes("number").fillna(0) / 1000  # Convert kWh to MWh
+    ncg_aggregated = ncg_data.sum(axis="columns").sort_index()
 
     # Read GASPOOL CSV file
-    gaspool_consumption = pd.read_csv(file_gaspool, sep=";", index_col="Datum")
-
-    gaspool_consumption.index = pd.to_datetime(
-        gaspool_consumption.index, format="%d.%m.%Y"
-    )
-    gaspool_consumption_aggregated = gaspool_consumption.sum(axis="columns")
+    gaspool_data = pd.read_csv(file_gaspool, sep=";", index_col="Datum")
+    gaspool_data.index = pd.to_datetime(gaspool_data.index, format="%d.%m.%Y")
+    gaspool_aggregated = gaspool_data.sum(axis="columns").sort_index()
 
     # Read Trading Hub Europe CSV file
-    the_consumption = pd.read_csv(file_the, sep=";", thousands=",", index_col="Gasday")
+    the_data = pd.read_csv(file_the, sep=";", thousands=",", index_col="Gasday")
+    the_data.index = pd.to_datetime(the_data.index, format="%d/%m/%Y")
+    the_data = the_data.select_dtypes("number").fillna(0) / 1000
+    the_aggregated = the_data.sum(axis="columns").sort_index()
 
-    the_consumption.index = pd.to_datetime(the_consumption.index, format="%d/%m/%Y")
-
-    # Convert kWh to MWh and aggregate different measurement types
-    the_consumption = the_consumption.select_dtypes("number") / 1000
-    the_consumption_aggregated = the_consumption.sum(axis="columns")
-
-    return tuple(
+    # Combine all data
+    total_consumption = pd.concat(
         [
-            ncg_consumption_aggregated.sort_index(),
-            gaspool_consumption_aggregated.sort_index(),
-            the_consumption_aggregated.sort_index(),
+            ncg_aggregated.add(gaspool_aggregated, fill_value=0),
+            the_aggregated,
         ]
     )
+    total_consumption = pd.DataFrame(total_consumption, columns=["consumption (MWh)"])
+    return total_consumption
+
+
 
 
 def read_weather(file: str = "data/open-meteo-52.55N13.41E38m.csv") -> pd.Series:
@@ -60,4 +59,4 @@ def read_weather(file: str = "data/open-meteo-52.55N13.41E38m.csv") -> pd.Series
     # Set the date column as the index
     data.set_index("Date", inplace=True)
     
-    return data
+    return data.sort_index()
